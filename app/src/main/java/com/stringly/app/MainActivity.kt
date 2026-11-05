@@ -28,6 +28,8 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object Tabs : Screen("tabs", "Tabs", Icons.Default.QueueMusic)
     object JamSpot : Screen("jam-spot", "Jam Spot", Icons.Default.Groups)
     object Pedalboard : Screen("pedalboard", "Pedals", Icons.Default.Speaker)
+    object Login : Screen( route = "login", title="Login", Icons.Default.Login)
+    object SignUp : Screen( route = "signup", title = "Sign Up", Icons.Default.HowToReg)
 }
 
 class MainActivity : ComponentActivity() {
@@ -50,51 +52,84 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
-                        NavigationBar(
-                            containerColor = Color.White,
-                            tonalElevation = 6.dp
-                        ) {
-                            bottomNavItems.forEach { screen ->
-                                val selected = currentRoute == screen.route
-                                NavigationBarItem(
-                                    selected = selected,
-                                    onClick = {
-                                        navController.navigate(screen.route) {
-                                            popUpTo(navController.graph.startDestinationId) {
-                                                saveState = true
+                        if (currentRoute != Screen.Login.route && currentRoute != Screen.SignUp.route) {
+                            NavigationBar(
+                                containerColor = Color.White,
+                                tonalElevation = 6.dp
+                            ) {
+                                bottomNavItems.forEach { screen ->
+                                    val selected = currentRoute == screen.route
+                                    NavigationBarItem(
+                                        selected = selected,
+                                        onClick = {
+                                            navController.navigate(screen.route) {
+                                                popUpTo(navController.graph.startDestinationId) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                restoreState = true
                                             }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    },
-                                    icon = {
-                                        Icon(
-                                            imageVector = screen.icon,
-                                            contentDescription = screen.title
+                                        },
+                                        icon = {
+                                            Icon(
+                                                imageVector = screen.icon,
+                                                contentDescription = screen.title
+                                            )
+                                        },
+                                        label = {
+                                            Text(
+                                                text = screen.title,
+                                                fontSize = 10.sp,
+                                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                            )
+                                        },
+                                        colors = NavigationBarItemDefaults.colors(
+                                            selectedIconColor = PrimaryRed,
+                                            selectedTextColor = PrimaryRed,
+                                            indicatorColor = PrimaryRed.copy(alpha = 0.12f)
                                         )
-                                    },
-                                    label = {
-                                        Text(
-                                            text = screen.title,
-                                            fontSize = 10.sp,
-                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                                        )
-                                    },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = PrimaryRed,
-                                        selectedTextColor = PrimaryRed,
-                                        indicatorColor = PrimaryRed.copy(alpha = 0.12f)
                                     )
-                                )
+                                }
                             }
                         }
                     }
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = Screen.Home.route,
+                        startDestination = Screen.Login.route,
                         modifier = Modifier.padding(innerPadding)
                     ) {
+                        composable(Screen.Login.route) {
+                            LoginScreen(
+                                onLoginSuccess = {
+                                    navController.navigate(Screen.Home.route){
+                                        popUpTo(Screen.Login.route){
+                                            inclusive = true
+                                        }
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onNavigateToSignUp = {
+                                    navController.navigate(Screen.SignUp.route)
+                                }
+                            )
+                        }
+
+                        composable(Screen.SignUp.route) {
+                            SignUpScreen(
+                                onSignUpSuccess = {
+                                    navController.navigate(Screen.Login.route) {
+                                        popUpTo(Screen.SignUp.route) {
+                                            inclusive = true
+                                        }
+                                    }
+                                },
+                                onNavigateToLogin = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
                         composable(Screen.Home.route) {
                             HomeScreen(onNavigateTo = { route -> navController.navigate(route) })
                         }
