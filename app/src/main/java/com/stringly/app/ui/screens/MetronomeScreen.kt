@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,7 +23,9 @@ import androidx.compose.ui.unit.sp
 import com.stringly.app.ui.theme.*
 
 @Composable
-fun MetronomeScreen() {
+fun MetronomeScreen(
+    onBack: () -> Unit = {}
+) {
     var bpm by remember { mutableIntStateOf(120) }
     var isPlaying by remember { mutableStateOf(false) }
     var currentBeat by remember { mutableIntStateOf(0) }
@@ -81,32 +84,33 @@ fun MetronomeScreen() {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "METRONOME",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryRed,
-                    letterSpacing = 1.5.sp
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
                 Text(
                     text = "Precision Clock",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = OnSurfaceLight
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Color.White,
-                shadowElevation = 1.dp
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
                     Text(
                         text = "$timeSignature/4",
                         fontWeight = FontWeight.Bold,
-                        color = OnSurfaceLight,
-                        fontSize = 14.sp
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }

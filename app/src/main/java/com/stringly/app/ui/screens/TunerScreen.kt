@@ -6,14 +6,21 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.*
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -27,7 +34,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stringly.app.tuner.GuitarTunerConstants
@@ -35,50 +52,145 @@ import com.stringly.app.tuner.GuitarTunerEngine
 import com.stringly.app.tuner.TuningStatus
 import com.stringly.app.ui.theme.*
 import java.util.Locale
+import com.stringly.app.ui.theme.ElectricOrange
+import com.stringly.app.ui.theme.GraphiteMute
+import com.stringly.app.ui.theme.PrimaryRed
+import com.stringly.app.ui.theme.StageSuccess
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
 @SuppressLint("UnusedContentLambdaTargetStateParameter")
 @Composable
-fun TunerScreen() {
-    val context = LocalContext.current
-    val tunerEngine = remember { GuitarTunerEngine(context) }
-    val uiState by tunerEngine.uiState.collectAsState()
+fun TunerScreen(
+    defaultTuning: String = "Standard",
+    a4Calibration: String = "440 Hz"
+) {
+    var activeTuning by remember(defaultTuning) { mutableStateOf(defaultTuning) }
+    val initialHz = remember(a4Calibration) {
+        a4Calibration.filter { it.isDigit() }.ifBlank { "440" }
+    }
+    var baseFreqInput by remember(initialHz) { mutableStateOf(initialHz) }
+    var baseFreqError by remember { mutableStateOf<String?>(null) }
+    val validBaseHz = baseFreqInput.toIntOrNull()?.takeIf { it in 380..480 } ?: 440
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            tunerEngine.startTuning()
+    var showTuningsPopup by remember { mutableStateOf(false) }
+    var showSettingsPopup by remember { mutableStateOf(false) }
+
+    var detectAllNotes by remember { mutableStateOf(false) }
+    var showAdvancedInfo by remember { mutableStateOf(true) }
+    var tuneByEar by remember { mutableStateOf(false) }
+
+    val availableTunings = listOf("Standard", "Eb Standard", "Drop D", "Drop C", "Open G", "DADGAD")
+
+    val strings = remember(activeTuning) {
+        when (activeTuning) {
+            "Eb Standard" -> listOf(
+                GuitarString("Eb", 2, 77.78f),
+                GuitarString("Ab", 2, 103.83f),
+                GuitarString("Db", 3, 138.59f),
+                GuitarString("Gb", 3, 185.00f),
+                GuitarString("Bb", 3, 233.08f),
+                GuitarString("Eb", 4, 311.13f)
+            )
+            "Drop D" -> listOf(
+                GuitarString("D", 2, 73.42f),
+                GuitarString("A", 2, 110.00f),
+                GuitarString("D", 3, 146.83f),
+                GuitarString("G", 3, 196.00f),
+                GuitarString("B", 3, 246.94f),
+                GuitarString("E", 4, 329.63f)
+            )
+            "Drop C" -> listOf(
+                GuitarString("C", 2, 65.41f),
+                GuitarString("G", 2, 98.00f),
+                GuitarString("C", 3, 130.81f),
+                GuitarString("F", 3, 174.61f),
+                GuitarString("A", 3, 220.00f),
+                GuitarString("D", 4, 293.66f)
+            )
+            "Open G" -> listOf(
+                GuitarString("D", 2, 73.42f),
+                GuitarString("G", 2, 98.00f),
+                GuitarString("D", 3, 146.83f),
+                GuitarString("G", 3, 196.00f),
+                GuitarString("B", 3, 246.94f),
+                GuitarString("D", 4, 293.66f)
+            )
+            "DADGAD" -> listOf(
+                GuitarString("D", 2, 73.42f),
+                GuitarString("A", 2, 110.00f),
+                GuitarString("D", 3, 146.83f),
+                GuitarString("G", 3, 196.00f),
+                GuitarString("A", 3, 220.00f),
+                GuitarString("D", 4, 293.66f)
+            )
+            else -> listOf(
+                GuitarString("E", 2, 82.41f),
+                GuitarString("A", 2, 110.00f),
+                GuitarString("D", 3, 146.83f),
+                GuitarString("G", 3, 196.00f),
+                GuitarString("B", 3, 246.94f),
+                GuitarString("E", 4, 329.63f)
+            )
         }
     }
 
-    DisposableEffect(Unit) {
-        if (tunerEngine.checkPermission()) {
-            tunerEngine.startTuning()
-        } else {
-            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        }
-        onDispose {
-            tunerEngine.release()
+    var selectedStringIndex by remember { mutableIntStateOf(0) }
+    val currentString = strings[selectedStringIndex]
+
+    var centsOffset by remember { mutableFloatStateOf(-14f) }
+    var isMicListening by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isMicListening, selectedStringIndex) {
+        if (isMicListening) {
+            kotlinx.coroutines.delay(900)
+            centsOffset = 0f
         }
     }
 
-    // Needle rotation animation (-50 cents maps to -55 degrees, +50 cents maps to +55 degrees)
-    val needleRotation = remember { Animatable(0f) }
+    val animatedCents by animateFloatAsState(
+        targetValue = centsOffset.coerceIn(-50f, 50f),
+        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
+        label = "centsBall"
+    )
 
-    LaunchedEffect(uiState.centsOffset, uiState.hasSignal) {
-        val targetAngle = if (uiState.hasSignal) {
-            (uiState.centsOffset / 50f * 55f).coerceIn(-65f, 65f)
-        } else {
-            0f
+    val absCents = abs(animatedCents)
+    val isInTune = absCents <= 3f
+
+    // Continuous color gradient transition: Green (0) -> Orange (15) -> Red (35+)
+    val indicatorColor = remember(absCents) {
+        when {
+            absCents <= 3f -> StageSuccess
+            absCents <= 18f -> lerp(StageSuccess, ElectricOrange, (absCents - 3f) / 15f)
+            else -> lerp(ElectricOrange, PrimaryRed, ((absCents - 18f) / 22f).coerceIn(0f, 1f))
         }
-        needleRotation.animateTo(targetAngle, animationSpec = tween(120))
     }
 
-    val scrollState = rememberScrollState()
+    // Brand-cohesive pulse for active string button while tuning (soft primary tint <-> solid primary)
+    val pulseTransition = rememberInfiniteTransition(label = "pegNotePulse")
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
+    val pulsingBg by pulseTransition.animateColor(
+        initialValue = primaryColor.copy(alpha = 0.20f),
+        targetValue = primaryColor,
+        animationSpec = infiniteRepeatable(
+            animation = tween(750, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulsingBg"
+    )
+    val pulsingFg by pulseTransition.animateColor(
+        initialValue = primaryColor,
+        targetValue = onPrimaryColor,
+        animationSpec = infiniteRepeatable(
+            animation = tween(750, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulsingFg"
+    )
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -198,45 +310,225 @@ fun TunerScreen() {
                     .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
+                IconButton(
+                    onClick = {
+                        showTuningsPopup = !showTuningsPopup
+                        if (showTuningsPopup) showSettingsPopup = false
+                    },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = "Available tunings",
+                        tint = if (showTuningsPopup) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Row(verticalAlignment = Alignment.Bottom) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
                         Text(
-                            text = if (uiState.hasSignal || !uiState.isAutoMode) uiState.noteName else "—",
-                            fontSize = 42.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = OnSurfaceLight
+                                                text = activeTuning,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (!uiState.isAutoMode || detectAllNotes) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                    ) {
+                        Text(
+                            text = "Chromatic",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
-                        if (uiState.hasSignal || !uiState.isAutoMode) {
-                            Text(
-                                text = "${uiState.octave}",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (uiState.status == TuningStatus.IN_TUNE) StageSuccess else PrimaryRed
-                            )
-                        }
+                    }
+                }
+            }
+            if (showAdvancedInfo) {
+                Text(
+                    text = "A4 = $validBaseHz Hz",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        IconButton(
+            onClick = {
+                showSettingsPopup = !showSettingsPopup
+                if (showSettingsPopup) showTuningsPopup = false
+            },
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Tuner settings",
+                tint = if (showSettingsPopup) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+
+    // Hero Tuner Stage Card (fills remaining vertical space cleanly)
+    val isInTune = uiState.status == TuningStatus.IN_TUNE
+    val activeIndicatorColor = when {
+        !uiState.hasSignal && uiState.isAutoMode -> MaterialTheme.colorScheme.onSurfaceVariant
+        isInTune -> StageSuccess
+        else -> indicatorColor
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceEvenly
+        ) {
+            ArcPitchMeter(
+                cents = animatedCents,
+                indicatorColor = activeIndicatorColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(132.dp)
+            )
+
+            // Center Note Readout (Merged Backend uiState + Main UI Styling)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    val displayNote = if (uiState.hasSignal || !uiState.isAutoMode) {
+                        if (selectedStringIndex == 5 && uiState.noteName == "E") "e" else uiState.noteName
+                    } else {
+                        "—"
                     }
 
-                    Spacer(modifier = Modifier.height(2.dp))
-
                     Text(
-                        text = if (uiState.hasSignal) {
-                            String.format(Locale.US, "%.1f Hz", uiState.detectedFrequency)
-                        } else {
-                            "— Hz"
-                        },
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = OnSurfaceLight
+                        text = displayNote,
+                        fontSize = 80.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (isInTune) StageSuccess else MaterialTheme.colorScheme.onSurface
                     )
 
+                    if (uiState.hasSignal || !uiState.isAutoMode) {
+                        Text(
+                            text = "${uiState.octave}",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = activeIndicatorColor,
+                            modifier = Modifier.padding(bottom = 14.dp, start = 4.dp)
+                        )
+                    }
+                }
+
+                // Detected Frequency & Target Frequency from Backend
+                Text(
+                    text = if (uiState.hasSignal) {
+                        String.format(Locale.US, "%.1f Hz", uiState.detectedFrequency)
+                    } else {
+                        "— Hz"
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                if (showAdvancedInfo) {
                     Text(
                         text = String.format(Locale.US, "Target: %.2f Hz", uiState.targetFrequency),
-                        fontSize = 10.sp,
-                        color = GraphiteMute
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Tuning Status Pill
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = activeIndicatorColor.copy(alpha = 0.14f)
+                ) {
+                    Text(
+                        text = when {
+                            !uiState.hasSignal && uiState.isAutoMode -> "Listening..."
+                            isInTune -> "In Tune"
+                            animatedCents < 0f -> "Flat — Tune Up"
+                            else -> "Sharp — Tune Down"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = activeIndicatorColor,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                     )
                 }
             }
         }
+    }
+
+    // 6-String Selector Card
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "STRINGS",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 6.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        strings.forEachIndexed { idx, s ->
+                            val label = if (idx == 5 && s.note == "E") "e" else s.note
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                TuningNoteButton(
+                                    label = label,
+                                    isSelected = selectedStringIndex == idx,
+                                    isInTune = isInTune,
+                                    pulsingBg = pulsingBg,
+                                    pulsingFg = pulsingFg,
+                                    onClick = {
+                                        selectedStringIndex = idx
+                                        centsOffset = if (tuneByEar) 0f else listOf(-28f, -12f, 9f, 24f).random()
+                                    }
+                                )
+                                Text(
+                                    text = "${6 - idx}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
         // Tuning Status Badge
         val statusBgColor = when (uiState.status) {
@@ -285,7 +577,28 @@ fun TunerScreen() {
                     contentDescription = null,
                     tint = statusTextColor,
                     modifier = Modifier.size(18.dp)
+            // Bottom Mic Listen Button
+            Button(
+                onClick = {
+                    isMicListening = !isMicListening
+                    if (!isMicListening) {
+                        centsOffset = -14f
+                    }
+                },
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isMicListening) StageSuccess else MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+            ) {
+                Icon(
+                    imageVector = if (isMicListening) Icons.Default.MicOff else Icons.Default.Mic,
+                    contentDescription = "Microphone toggle",
+                    modifier = Modifier.size(20.dp)
                 )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = statusText,
                     fontSize = 12.sp,
@@ -295,7 +608,7 @@ fun TunerScreen() {
             }
         }
 
-        // Real-Time Waveform & Signal Strength Card
+        // Real-Time Waveform & Signal Strength Card (from Back-End_Faishal)
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -367,7 +680,6 @@ fun TunerScreen() {
                                 val y = centerY - (sample * (height / 2f - 4.dp.toPx()))
                                 if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
                             }
-
                             drawPath(
                                 path = path,
                                 color = if (uiState.hasSignal) StageSuccess else PrimaryRed.copy(alpha = 0.7f),
@@ -387,7 +699,7 @@ fun TunerScreen() {
             }
         }
 
-        // Quick String Selector & Auto Toggle Bar
+        // Quick String Selector & Auto Toggle Bar (from Back-End_Faishal)
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -405,15 +717,12 @@ fun TunerScreen() {
                     color = GraphiteMute,
                     letterSpacing = 1.sp
                 )
-
                 // AUTO Mode Pill Button
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = if (uiState.isAutoMode) PrimaryRed else Color.White,
                     shadowElevation = 1.dp,
-                    modifier = Modifier.clickable {
-                        tunerEngine.setSelectedStringIndex(-1)
-                    }
+                    modifier = Modifier.clickable { tunerEngine.setSelectedStringIndex(-1) }
                 ) {
                     Text(
                         text = "AUTO DETECT",
@@ -422,6 +731,91 @@ fun TunerScreen() {
                         fontSize = 11.sp,
                         color = if (uiState.isAutoMode) Color.White else OnSurfaceLight
                     )
+                }
+            }
+        }
+    } // <-- Closes the main screen Column (from main)
+
+    // Outside-tap scrim for open top pop-ups (from main)
+    if (showTuningsPopup || showSettingsPopup) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.28f))
+                .clickable {
+                    showTuningsPopup = false
+                    showSettingsPopup = false
+                }
+        )
+    }
+
+    // Top Pop-up Card: Available Tunings (from main)
+    AnimatedVisibility(
+        visible = showTuningsPopup,
+        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+        modifier = Modifier
+            .align(Alignment.TopCenter)
+            .padding(top = 72.dp, start = 16.dp, end = 16.dp)
+    ) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Available Tunings",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    IconButton(onClick = { showTuningsPopup = false }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+                availableTunings.forEach { tuning ->
+                    val selected = tuning == activeTuning
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                activeTuning = tuning
+                                showTuningsPopup = false
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = tuning,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                            if (selected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
                 }
             }
 
@@ -465,60 +859,335 @@ fun TunerScreen() {
             }
         }
 
-        // Permission / Listening Action Button
-        if (!uiState.permissionGranted) {
-            Button(
-                onClick = {
-                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                },
-                shape = RoundedCornerShape(26.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryRed),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Mic,
-                    contentDescription = "Grant Mic",
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "GRANT MICROPHONE PERMISSION",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
+// Permission / Listening Action Button
+            if (!uiState.permissionGranted) {
+                Button(
+                    onClick = {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    },
+                    shape = RoundedCornerShape(26.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryRed),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = "Grant Mic",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "GRANT MICROPHONE PERMISSION",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                OutlinedButton(
+                    onClick = {
+                        if (uiState.isListening) {
+                            tunerEngine.stopTuning()
+                        } else {
+                            tunerEngine.startTuning()
+                        }
+                    },
+                    shape = RoundedCornerShape(26.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                ) {
+                    Icon(
+                        imageVector = if (uiState.isListening) Icons.Default.Pause else Icons.Default.Mic,
+                        contentDescription = "Mic State",
+                        tint = PrimaryRed,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (uiState.isListening) "STOP MICROPHONE" else "START TUNER",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryRed
+                    )
+                }
             }
-        } else {
-            OutlinedButton(
-                onClick = {
-                    if (uiState.isListening) {
-                        tunerEngine.stopTuning()
-                    } else {
-                        tunerEngine.startTuning()
-                    }
-                },
-                shape = RoundedCornerShape(26.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp)
-            ) {
-                Icon(
-                    imageVector = if (uiState.isListening) Icons.Default.Pause else Icons.Default.Mic,
-                    contentDescription = "Mic State",
-                    tint = PrimaryRed,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (uiState.isListening) "STOP MICROPHONE" else "START TUNER",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryRed
-                )
-            }
+
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        // Top Pop-up Card: Tuner Settings (with typeable Base Frequency)
+        AnimatedVisibility(
+            visible = showSettingsPopup,
+            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 72.dp, start = 16.dp, end = 16.dp)
+        ) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Tuner Settings",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        IconButton(onClick = { showSettingsPopup = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = baseFreqInput,
+                        onValueChange = { raw ->
+                            val digits = raw.filter { it.isDigit() }.take(3)
+                            baseFreqInput = digits
+                            val parsed = digits.toIntOrNull()
+                            baseFreqError = if (parsed == null || parsed !in 380..480) {
+                                "Enter a frequency between 380 and 480 Hz"
+                            } else {
+                                null
+                            }
+                        },
+                        label = { Text("Base Frequency (A4 Hz)") },
+                        suffix = { Text("Hz") },
+                        isError = baseFreqError != null,
+                        supportingText = {
+                            Text(baseFreqError ?: "Concert pitch default is 440 Hz")
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
+
+                    SettingSwitchRow(
+                        title = "Detect All Notes",
+                        subtitle = "Chromatic auto-detect across any pitch",
+                        checked = detectAllNotes,
+                        onCheckedChange = { detectAllNotes = it }
+                    )
+                    SettingSwitchRow(
+                        title = "Advanced Info",
+                        subtitle = "Show target Hz & A4 calibration",
+                        checked = showAdvancedInfo,
+                        onCheckedChange = { showAdvancedInfo = it }
+                    )
+                    SettingSwitchRow(
+                        title = "Tune by Ear",
+                        subtitle = "Play reference pitch when tapping a note",
+                        checked = tuneByEar,
+                        onCheckedChange = { tuneByEar = it }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArcPitchMeter(
+    cents: Float,
+    indicatorColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val textMeasurer = rememberTextMeasurer()
+    val trackColor = GraphiteMute.copy(alpha = 0.72f)
+
+    Canvas(
+        modifier = modifier.padding(horizontal = 20.dp, vertical = 18.dp)
+    ) {
+        val ballRadius = 18.dp.toPx()
+        val trackWidth = ballRadius * 2f
+        val arcWidth = size.width
+        val arcHeight = size.height * 1.45f
+        val topLeft = Offset(0f, size.height * 0.30f)
+
+        // Solid grey arc track matching the indicator ball's diameter
+        drawArc(
+            color = trackColor,
+            startAngle = 205f,
+            sweepAngle = 130f,
+            useCenter = false,
+            topLeft = topLeft,
+            size = Size(arcWidth, arcHeight),
+            style = Stroke(width = trackWidth, cap = StrokeCap.Round)
+        )
+
+        val rx = arcWidth / 2f
+        val ry = arcHeight / 2f
+        val cx = topLeft.x + rx
+        val cy = topLeft.y + ry
+
+        // Flat (♭) inside left end of the meter in white
+        val flatRad = Math.toRadians(205.0)
+        val flatX = cx + rx * cos(flatRad).toFloat()
+        val flatY = cy + ry * sin(flatRad).toFloat()
+        val flatMeasured = textMeasurer.measure(
+            text = "♭",
+            style = TextStyle(
+                color = Color.White,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Black
+            )
+        )
+        drawText(
+            textLayoutResult = flatMeasured,
+            topLeft = Offset(
+                flatX - flatMeasured.size.width / 2f,
+                flatY - flatMeasured.size.height / 2f
+            )
+        )
+
+        // Sharp (♯) inside right end of the meter in white
+        val sharpRad = Math.toRadians(335.0)
+        val sharpX = cx + rx * cos(sharpRad).toFloat()
+        val sharpY = cy + ry * sin(sharpRad).toFloat()
+        val sharpMeasured = textMeasurer.measure(
+            text = "♯",
+            style = TextStyle(
+                color = Color.White,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Black
+            )
+        )
+        drawText(
+            textLayoutResult = sharpMeasured,
+            topLeft = Offset(
+                sharpX - sharpMeasured.size.width / 2f,
+                sharpY - sharpMeasured.size.height / 2f
+            )
+        )
+
+        // Center 0-cent subtle white reference tick
+        val centerRad = Math.toRadians(270.0)
+        val tickX = cx + rx * cos(centerRad).toFloat()
+        val tickY = cy + ry * sin(centerRad).toFloat()
+        drawLine(
+            color = Color.White.copy(alpha = 0.45f),
+            start = Offset(tickX, tickY - ballRadius * 0.65f),
+            end = Offset(tickX, tickY + ballRadius * 0.65f),
+            strokeWidth = 2.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+
+        // Sliding indicator ball (mapped across the inner arc range so it doesn't cover ♭/♯ at rest)
+        val t = ((cents + 50f) / 100f).coerceIn(0f, 1f)
+        val ballAngleDeg = 213f + t * 114f
+        val ballAngleRad = Math.toRadians(ballAngleDeg.toDouble())
+        val ballX = cx + rx * cos(ballAngleRad).toFloat()
+        val ballY = cy + ry * sin(ballAngleRad).toFloat()
+
+        drawCircle(
+            color = indicatorColor,
+            radius = ballRadius,
+            center = Offset(ballX, ballY)
+        )
+
+        // Cent offset number centered inside the indicator ball
+        val centsInt = cents.toInt()
+        val label = if (centsInt > 0) "+$centsInt" else "$centsInt"
+        val measured = textMeasurer.measure(
+            text = label,
+            style = TextStyle(
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+        )
+        drawText(
+            textLayoutResult = measured,
+            topLeft = Offset(
+                ballX - measured.size.width / 2f,
+                ballY - measured.size.height / 2f
+            )
+        )
+    }
+}
+
+@Composable
+private fun TuningNoteButton(
+    label: String,
+    isSelected: Boolean,
+    isInTune: Boolean,
+    pulsingBg: Color,
+    pulsingFg: Color,
+    onClick: () -> Unit
+) {
+    val bgColor = when {
+        isSelected && isInTune -> StageSuccess
+        isSelected -> pulsingBg
+        else -> MaterialTheme.colorScheme.surface
+    }
+    val fgColor = when {
+        isSelected && isInTune -> Color.White
+        isSelected -> pulsingFg
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(bgColor)
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected && isInTune) StageSuccess else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
+                shape = CircleShape
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = fgColor
+        )
+    }
+}
+
+@Composable
+private fun SettingSwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
     }
 }
