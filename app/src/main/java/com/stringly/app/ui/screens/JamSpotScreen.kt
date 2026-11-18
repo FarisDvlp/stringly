@@ -13,29 +13,33 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.stringly.app.ui.theme.*
 
 data class JamPost(
+    val id: Int,
     val author: String,
     val title: String,
     val description: String,
     val likes: Int,
     val replies: Int,
-    val tag: String
+    val tag: String,
+    val isLiked: Boolean = false
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JamSpotScreen() {
-    val posts = listOf(
-        JamPost("Mateo R.", "Neo-Soul Double Stops in E", "Clean tone + slight chorus magic with thumb-over bass chords.", 342, 48, "Tabs Included"),
-        JamPost("Sarah K.", "How do you build speed on Economy Picking?", "Stuck at 130 BPM on the 3-notes-per-string major scales.", 189, 32, "Technique"),
-        JamPost("David G.", "Custom Pedal Chain for 80s Shoegaze", "Fuzz into reverse delay before pre-amp drive gives infinite textures.", 512, 74, "Gear Rig"),
-        JamPost("Elena V.", "Acoustic Fingerstyle Perussive Slap", "Combining thumb slap with index finger upward strum on Cadd9.", 275, 19, "Acoustic")
-    )
+    val posts = remember {
+        mutableStateListOf(
+            JamPost(1, "Mateo R.", "Neo-Soul Double Stops in E", "Clean tone + slight chorus magic with thumb-over bass chords.", 342, 48, "Tabs Included"),
+            JamPost(2, "Sarah K.", "How do you build speed on Economy Picking?", "Stuck at 130 BPM on the 3-notes-per-string major scales.", 189, 32, "Technique"),
+            JamPost(3, "David G.", "Custom Pedal Chain for 80s Shoegaze", "Fuzz into reverse delay before pre-amp drive gives infinite textures.", 512, 74, "Gear Rig"),
+            JamPost(4, "Elena V.", "Acoustic Fingerstyle Percussive Slap", "Combining thumb slap with index finger upward strum on Cadd9.", 275, 19, "Acoustic")
+        )
+    }
+
+    var showComposer by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -50,44 +54,41 @@ fun JamSpotScreen() {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "COMMUNITY HUB",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryRed,
-                    letterSpacing = 1.5.sp
-                )
-                Text(
-                    text = "Jam Spot Forum",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = OnSurfaceLight
-                )
-            }
+            Text(
+                text = "Jam Spot Forum",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
             Button(
-                onClick = {},
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryRed),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                onClick = { showComposer = true },
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = "Post Lick", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Post Lick",
+                    style = MaterialTheme.typography.labelSmall
+                )
             }
         }
 
         // Community Posts Feed
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(posts) { post ->
+            items(posts, key = { it.id }) { post ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -103,33 +104,31 @@ fun JamSpotScreen() {
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(CircleShape)
-                                        .background(PrimaryRed),
+                                        .background(MaterialTheme.colorScheme.primary),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         text = post.author.first().toString(),
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        fontSize = 14.sp
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        style = MaterialTheme.typography.bodyMedium
                                     )
                                 }
                                 Text(
                                     text = post.author,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp,
-                                    color = OnSurfaceLight
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFFF3F3F5)
+                                color = MaterialTheme.colorScheme.surface
                             ) {
                                 Text(
                                     text = post.tag,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = GraphiteMute,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
                         }
@@ -138,16 +137,14 @@ fun JamSpotScreen() {
 
                         Text(
                             text = post.title,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = OnSurfaceLight
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = post.description,
-                            fontSize = 13.sp,
-                            color = GraphiteMute,
-                            lineHeight = 18.sp
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
@@ -158,22 +155,34 @@ fun JamSpotScreen() {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        val idx = posts.indexOfFirst { it.id == post.id }
+                                        if (idx != -1) {
+                                            val current = posts[idx]
+                                            posts[idx] = current.copy(
+                                                isLiked = !current.isLiked,
+                                                likes = if (current.isLiked) current.likes - 1 else current.likes + 1
+                                            )
+                                        }
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Favorite,
-                                        contentDescription = null,
-                                        tint = PrimaryRed,
+                                        imageVector = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        contentDescription = "Like post",
+                                        tint = if (post.isLiked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(16.dp)
                                     )
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "${post.likes}",
-                                        fontSize = 12.sp,
-                                        color = GraphiteMute,
-                                        fontWeight = FontWeight.Medium
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 Row(
@@ -183,24 +192,103 @@ fun JamSpotScreen() {
                                     Icon(
                                         imageVector = Icons.Default.ChatBubbleOutline,
                                         contentDescription = null,
-                                        tint = GraphiteMute,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
                                         text = "${post.replies} replies",
-                                        fontSize = 12.sp,
-                                        color = GraphiteMute,
-                                        fontWeight = FontWeight.Medium
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
                             Icon(
                                 imageVector = Icons.Default.Share,
-                                contentDescription = null,
-                                tint = GraphiteMute,
+                                contentDescription = "Share post",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showComposer) {
+        var title by remember { mutableStateOf("") }
+        var body by remember { mutableStateOf("") }
+        var tag by remember { mutableStateOf("Technique") }
+        var error by remember { mutableStateOf<String?>(null) }
+
+        ModalBottomSheet(
+            onDismissRequest = { showComposer = false },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Post to Jam Spot",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it; error = null },
+                    label = { Text("Title *") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = body,
+                    onValueChange = { body = it; error = null },
+                    label = { Text("Lick, Question, or Notes *") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (error != null) {
+                    Text(
+                        text = error!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = { showComposer = false }) {
+                        Text("Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            if (title.isBlank() || body.isBlank()) {
+                                error = "Please add a title and description."
+                            } else {
+                                posts.add(
+                                    0,
+                                    JamPost(
+                                        id = (posts.maxOfOrNull { it.id } ?: 0) + 1,
+                                        author = "Leo (You)",
+                                        title = title.trim(),
+                                        description = body.trim(),
+                                        likes = 1,
+                                        replies = 0,
+                                        tag = tag,
+                                        isLiked = true
+                                    )
+                                )
+                                showComposer = false
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Post")
                     }
                 }
             }

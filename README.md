@@ -6,10 +6,10 @@ Stringly is an Android Studio mobile application for guitarists, featuring tools
 - **Sonic Stage (Home)**: Live dashboard with real-time tuner and metronome pulses, chord of the day with interactive fretboard diagrams, and song practice challenges.
 - **Precision Metronome**: Real-time pendulum animation, tempo markings (Largo to Prestissimo), time signatures, and tactile beat pips.
 - **Chord Library**: 3,200+ chord voicings, interactive root note selector, fretboard diagrams, and audio strum previews.
-- **Interactive Tabs**: Tablature reader, tempo indicators, and song catalog with difficulty ratings.
+- **Songs**: Song catalog for searching chords in songs alongside lyrics, tuning, tempo/time, and difficulty ratings (like Ultimate Guitar).
 - **Chromatic Tuner**: Radial pitch gauge, real-time cent-offset needle display, standard guitar peg selection, and microphone listener.
 - **Jam Spot Forum**: Community feed for sharing guitar licks, technique inquiries, and gear setups.
-- **Virtual DSP Pedalboard**: 48kHz signal chain with stompbox pedals (Tube Screamer, Big Muff Pi, Small Clone Chorus, Flashback Delay) with toggleable bypass and parameter dials.
+- **Pedalboard**: Community forum for sharing gear setups—guitars, pedals, and parameter settings used for specific songs.
 - **Web Frontend Simulator**: Standalone interactive simulator at `index.html` to preview all Stitch screens.
 
 ## Tech Stack
