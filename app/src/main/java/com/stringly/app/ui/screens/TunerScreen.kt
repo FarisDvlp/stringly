@@ -1,5 +1,9 @@
 package com.stringly.app.ui.screens
 
+import android.Manifest
+import android.annotation.SuppressLint
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.*
@@ -28,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -35,10 +40,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stringly.app.tuner.GuitarTunerEngine
+import com.stringly.app.tuner.TuningStatus
 import com.stringly.app.ui.theme.ElectricOrange
 import com.stringly.app.ui.theme.GraphiteMute
 import com.stringly.app.ui.theme.PrimaryRed
 import com.stringly.app.ui.theme.StageSuccess
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -49,11 +57,35 @@ data class GuitarString(
     val freq: Float
 )
 
+@SuppressLint("UnusedContentLambdaTargetStateParameter")
 @Composable
 fun TunerScreen(
     defaultTuning: String = "Standard",
     a4Calibration: String = "440 Hz"
 ) {
+    val context = LocalContext.current
+    val tunerEngine = remember { GuitarTunerEngine(context) }
+    val uiState by tunerEngine.uiState.collectAsState()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            tunerEngine.startTuning()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        if (tunerEngine.checkPermission()) {
+            tunerEngine.startTuning()
+        } else {
+            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+        onDispose {
+            tunerEngine.release()
+        }
+    }
+
     var activeTuning by remember(defaultTuning) { mutableStateOf(defaultTuning) }
     val initialHz = remember(a4Calibration) {
         a4Calibration.filter { it.isDigit() }.ifBlank { "440" }
@@ -127,35 +159,26 @@ fun TunerScreen(
     var selectedStringIndex by remember { mutableIntStateOf(0) }
     val currentString = strings[selectedStringIndex]
 
-    var centsOffset by remember { mutableFloatStateOf(-14f) }
-    var isMicListening by remember { mutableStateOf(false) }
-
-    LaunchedEffect(isMicListening, selectedStringIndex) {
-        if (isMicListening) {
-            kotlinx.coroutines.delay(900)
-            centsOffset = 0f
-        }
-    }
+    val centsOffset = if (uiState.hasSignal) uiState.centsOffset else 0f
 
     val animatedCents by animateFloatAsState(
         targetValue = centsOffset.coerceIn(-50f, 50f),
-        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 150, easing = LinearOutSlowInEasing),
         label = "centsBall"
     )
 
     val absCents = abs(animatedCents)
-    val isInTune = absCents <= 3f
+    val isInTune = uiState.status == TuningStatus.IN_TUNE || (uiState.hasSignal && absCents <= 5f)
 
-    // Continuous color gradient transition: Green (0) -> Orange (15) -> Red (35+)
-    val indicatorColor = remember(absCents) {
+    val indicatorColor = remember(absCents, uiState.status) {
         when {
-            absCents <= 3f -> StageSuccess
-            absCents <= 18f -> lerp(StageSuccess, ElectricOrange, (absCents - 3f) / 15f)
+            uiState.status == TuningStatus.IN_TUNE -> StageSuccess
+            absCents <= 5f -> StageSuccess
+            absCents <= 18f -> lerp(StageSuccess, ElectricOrange, (absCents - 5f) / 13f)
             else -> lerp(ElectricOrange, PrimaryRed, ((absCents - 18f) / 22f).coerceIn(0f, 1f))
         }
     }
 
-    // Brand-cohesive pulse for active string button while tuning (soft primary tint <-> solid primary)
     val pulseTransition = rememberInfiniteTransition(label = "pegNotePulse")
     val primaryColor = MaterialTheme.colorScheme.primary
     val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
@@ -224,13 +247,13 @@ fun TunerScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        if (detectAllNotes) {
+                        if (detectAllNotes || uiState.isAutoMode) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
                             ) {
                                 Text(
-                                    text = "Chromatic",
+                                    text = if (uiState.isAutoMode) "Auto Mode" else "Chromatic",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -265,7 +288,7 @@ fun TunerScreen(
                 }
             }
 
-            // Hero Tuner Stage Card (fills remaining vertical space cleanly)
+            // Hero Tuner Stage Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -295,24 +318,31 @@ fun TunerScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.Bottom) {
+                            val displayedNote = if (uiState.hasSignal) uiState.noteName else currentString.note
+                            val displayedOctave = if (uiState.hasSignal) uiState.octave else currentString.octave
+
                             Text(
-                                text = if (selectedStringIndex == 5 && currentString.note == "E") "e" else currentString.note,
-                                fontSize = 80.sp,
+                                text = displayedNote,
+                                fontSize = 72.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = if (isInTune) StageSuccess else MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "${currentString.octave}",
-                                fontSize = 28.sp,
+                                text = "$displayedOctave",
+                                fontSize = 26.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = indicatorColor,
-                                modifier = Modifier.padding(bottom = 14.dp, start = 4.dp)
+                                modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
                             )
                         }
                         if (showAdvancedInfo) {
-                            val scaledFreq = currentString.freq * (validBaseHz / 440f)
+                            val freqText = if (uiState.hasSignal) {
+                                String.format(Locale.US, "%.1f Hz (Target: %.2f Hz)", uiState.detectedFrequency, uiState.targetFrequency)
+                            } else {
+                                String.format(Locale.US, "Target: %.2f Hz", currentString.freq * (validBaseHz / 440f))
+                            }
                             Text(
-                                text = "%.2f Hz".format(scaledFreq),
+                                text = freqText,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -321,12 +351,16 @@ fun TunerScreen(
                             shape = RoundedCornerShape(10.dp),
                             color = indicatorColor.copy(alpha = 0.14f)
                         ) {
+                            val statusText = when (uiState.status) {
+                                TuningStatus.IN_TUNE -> String.format(Locale.US, "PERFECTLY IN TUNE (±%.0f¢)", uiState.centsOffset)
+                                TuningStatus.FLAT -> String.format(Locale.US, "FLAT (%.0f¢) • TIGHTEN STRING", uiState.centsOffset)
+                                TuningStatus.SHARP -> String.format(Locale.US, "SHARP (+%.0f¢) • LOOSEN STRING", uiState.centsOffset)
+                                TuningStatus.NO_PERMISSION -> "MICROPHONE PERMISSION NEEDED"
+                                TuningStatus.ERROR -> uiState.errorMessage ?: "MICROPHONE ERROR"
+                                TuningStatus.LISTENING -> "LISTENING... PLUCK A STRING"
+                            }
                             Text(
-                                text = when {
-                                    isInTune -> "In Tune"
-                                    animatedCents < 0f -> "Flat — Tune Up"
-                                    else -> "Sharp — Tune Down"
-                                },
+                                text = statusText,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = indicatorColor,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
@@ -336,7 +370,7 @@ fun TunerScreen(
                 }
             }
 
-            // 6-String Selector Card
+            // 6-String Selector Card & Auto Button
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -347,36 +381,60 @@ fun TunerScreen(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = "STRINGS",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 6.dp)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "STRINGS TARGET",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 6.dp)
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (uiState.isAutoMode) PrimaryRed else MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.clickable {
+                                tunerEngine.setSelectedStringIndex(-1)
+                            }
+                        ) {
+                            Text(
+                                text = "AUTO DETECT",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (uiState.isAutoMode) Color.White else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         strings.forEachIndexed { idx, s ->
-                            val label = if (idx == 5 && s.note == "E") "e" else s.note
+                            val label = s.note
+                            val isSelected = !uiState.isAutoMode && selectedStringIndex == idx
+
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 TuningNoteButton(
                                     label = label,
-                                    isSelected = selectedStringIndex == idx,
-                                    isInTune = isInTune,
+                                    isSelected = isSelected,
+                                    isInTune = isInTune && isSelected,
                                     pulsingBg = pulsingBg,
                                     pulsingFg = pulsingFg,
                                     onClick = {
                                         selectedStringIndex = idx
-                                        centsOffset = if (tuneByEar) 0f else listOf(-28f, -12f, 9f, 24f).random()
+                                        tunerEngine.setSelectedStringIndex(idx)
                                     }
                                 )
                                 Text(
-                                    text = "${6 - idx}",
+                                    text = "${6 - idx}th",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -386,33 +444,59 @@ fun TunerScreen(
                 }
             }
 
-            // Bottom Mic Listen Button
-            Button(
-                onClick = {
-                    isMicListening = !isMicListening
-                    if (!isMicListening) {
-                        centsOffset = -14f
-                    }
-                },
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isMicListening) StageSuccess else MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp)
-            ) {
-                Icon(
-                    imageVector = if (isMicListening) Icons.Default.MicOff else Icons.Default.Mic,
-                    contentDescription = "Microphone toggle",
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (isMicListening) "LISTENING..." else "LISTEN THROUGH MIC",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+            // Bottom Mic Listen Button / Permission Button
+            if (!uiState.permissionGranted) {
+                Button(
+                    onClick = {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryRed),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = "Grant Mic",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "GRANT MICROPHONE PERMISSION",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                Button(
+                    onClick = {
+                        if (uiState.isListening) {
+                            tunerEngine.stopTuning()
+                        } else {
+                            tunerEngine.startTuning()
+                        }
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (uiState.isListening) StageSuccess else MaterialTheme.colorScheme.primary
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                ) {
+                    Icon(
+                        imageVector = if (uiState.isListening) Icons.Default.MicOff else Icons.Default.Mic,
+                        contentDescription = "Microphone toggle",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (uiState.isListening) "STOP MICROPHONE" else "START TUNER",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
@@ -501,7 +585,7 @@ fun TunerScreen(
             }
         }
 
-        // Top Pop-up Card: Tuner Settings (with typeable Base Frequency)
+        // Top Pop-up Card: Tuner Settings
         AnimatedVisibility(
             visible = showSettingsPopup,
             enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
@@ -603,7 +687,6 @@ private fun ArcPitchMeter(
         val arcHeight = size.height * 1.45f
         val topLeft = Offset(0f, size.height * 0.30f)
 
-        // Solid grey arc track matching the indicator ball's diameter
         drawArc(
             color = trackColor,
             startAngle = 205f,
@@ -619,7 +702,6 @@ private fun ArcPitchMeter(
         val cx = topLeft.x + rx
         val cy = topLeft.y + ry
 
-        // Flat (♭) inside left end of the meter in white
         val flatRad = Math.toRadians(205.0)
         val flatX = cx + rx * cos(flatRad).toFloat()
         val flatY = cy + ry * sin(flatRad).toFloat()
@@ -639,7 +721,6 @@ private fun ArcPitchMeter(
             )
         )
 
-        // Sharp (♯) inside right end of the meter in white
         val sharpRad = Math.toRadians(335.0)
         val sharpX = cx + rx * cos(sharpRad).toFloat()
         val sharpY = cy + ry * sin(sharpRad).toFloat()
@@ -659,7 +740,6 @@ private fun ArcPitchMeter(
             )
         )
 
-        // Center 0-cent subtle white reference tick
         val centerRad = Math.toRadians(270.0)
         val tickX = cx + rx * cos(centerRad).toFloat()
         val tickY = cy + ry * sin(centerRad).toFloat()
@@ -671,7 +751,6 @@ private fun ArcPitchMeter(
             cap = StrokeCap.Round
         )
 
-        // Sliding indicator ball (mapped across the inner arc range so it doesn't cover ♭/♯ at rest)
         val t = ((cents + 50f) / 100f).coerceIn(0f, 1f)
         val ballAngleDeg = 213f + t * 114f
         val ballAngleRad = Math.toRadians(ballAngleDeg.toDouble())
@@ -684,7 +763,6 @@ private fun ArcPitchMeter(
             center = Offset(ballX, ballY)
         )
 
-        // Cent offset number centered inside the indicator ball
         val centsInt = cents.toInt()
         val label = if (centsInt > 0) "+$centsInt" else "$centsInt"
         val measured = textMeasurer.measure(
