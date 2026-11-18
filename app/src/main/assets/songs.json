@@ -1,0 +1,646 @@
+[
+  {
+    "id": "song_001",
+    "title": "Akad",
+    "artist": "Payung Teduh",
+    "originalKey": "E",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": 2,
+    "difficulty": "Easy",
+    "bpm": 105,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "E", "position": 0 },
+                { "chord": "G#m", "position": 12 },
+                { "chord": "C#m", "position": 24 },
+                { "chord": "B", "position": 34 }
+              ],
+              "lyric": "E           G#m         C#m       B"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "E", "position": 0 },
+                { "chord": "G#m", "position": 20 }
+              ],
+              "lyric": "Bila aku sudah saatnya kembali pada-Nya"
+            },
+            {
+              "chords": [
+                { "chord": "A", "position": 0 },
+                { "chord": "B", "position": 18 }
+              ],
+              "lyric": "Aku ingin mendampingimu"
+            }
+          ]
+        },
+        {
+          "name": "Chorus",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "E", "position": 0 },
+                { "chord": "G#m", "position": 15 },
+                { "chord": "C#m", "position": 30 }
+              ],
+              "lyric": "Sudikah kau menjadi permaisuriku"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_002",
+    "title": "Dan",
+    "artist": "Sheila on 7",
+    "originalKey": "C",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": null,
+    "difficulty": "Easy",
+    "bpm": 92,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "C", "position": 0 },
+                { "chord": "Em", "position": 8 },
+                { "chord": "F", "position": 16 },
+                { "chord": "G", "position": 24 }
+              ],
+              "lyric": "C       Em      F       G"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "C", "position": 0 },
+                { "chord": "Em", "position": 18 }
+              ],
+              "lyric": "Dan... bila esok datang kembali"
+            },
+            {
+              "chords": [
+                { "chord": "F", "position": 0 },
+                { "chord": "G", "position": 16 }
+              ],
+              "lyric": "Seperti sedia kala"
+            }
+          ]
+        },
+        {
+          "name": "Chorus",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "C", "position": 0 },
+                { "chord": "G/B", "position": 14 },
+                { "chord": "Am", "position": 26 }
+              ],
+              "lyric": "Lupakanlah saja diriku"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_003",
+    "title": "Perfect",
+    "artist": "Ed Sheeran",
+    "originalKey": "Ab",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": 1,
+    "difficulty": "Easy",
+    "bpm": 63,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "G", "position": 0 },
+                { "chord": "Em", "position": 8 },
+                { "chord": "C", "position": 16 },
+                { "chord": "D", "position": 24 }
+              ],
+              "lyric": "G       Em      C       D"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "G", "position": 0 },
+                { "chord": "Em", "position": 20 }
+              ],
+              "lyric": "I found a love for me"
+            },
+            {
+              "chords": [
+                { "chord": "C", "position": 0 },
+                { "chord": "D", "position": 22 }
+              ],
+              "lyric": "Darling just dive right in"
+            }
+          ]
+        },
+        {
+          "name": "Chorus",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "Em", "position": 0 },
+                { "chord": "C", "position": 10 },
+                { "chord": "G", "position": 18 },
+                { "chord": "D", "position": 25 }
+              ],
+              "lyric": "Baby I'm dancing in the dark"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_004",
+    "title": "Kuning",
+    "artist": "Rumah Sakit",
+    "originalKey": "D",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": null,
+    "difficulty": "Medium",
+    "bpm": 118,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "D", "position": 0 },
+                { "chord": "F#m", "position": 8 },
+                { "chord": "G", "position": 16 },
+                { "chord": "A", "position": 24 }
+              ],
+              "lyric": "D       F#m     G       A"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "D", "position": 0 },
+                { "chord": "F#m", "position": 16 }
+              ],
+              "lyric": "Kuning mentari hangat menyapa"
+            },
+            {
+              "chords": [
+                { "chord": "G", "position": 0 },
+                { "chord": "A", "position": 14 }
+              ],
+              "lyric": "Dalam pelukanmu"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_005",
+    "title": "Wonderwall",
+    "artist": "Oasis",
+    "originalKey": "F#m",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": 2,
+    "difficulty": "Easy",
+    "bpm": 87,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "Em7", "position": 0 },
+                { "chord": "G", "position": 8 },
+                { "chord": "Dsus4", "position": 16 },
+                { "chord": "A7sus4", "position": 26 }
+              ],
+              "lyric": "Em7     G       Dsus4     A7sus4"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "Em7", "position": 0 },
+                { "chord": "G", "position": 18 },
+                { "chord": "Dsus4", "position": 30 }
+              ],
+              "lyric": "Today is gonna be the day that they're gonna throw it back to you"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_006",
+    "title": "Firasat",
+    "artist": "Marcell",
+    "originalKey": "F",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": null,
+    "difficulty": "Medium",
+    "bpm": 74,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "F", "position": 0 },
+                { "chord": "Am7", "position": 8 },
+                { "chord": "Bb", "position": 16 },
+                { "chord": "C7", "position": 24 }
+              ],
+              "lyric": "F       Am7     Bb      C7"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "F", "position": 0 },
+                { "chord": "Am7", "position": 14 }
+              ],
+              "lyric": "Lihatlah malam ini begitu indah"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_007",
+    "title": "Kita",
+    "artist": "Sheila on 7",
+    "originalKey": "E",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": null,
+    "difficulty": "Easy",
+    "bpm": 124,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "E", "position": 0 },
+                { "chord": "G#m", "position": 8 },
+                { "chord": "A", "position": 16 },
+                { "chord": "B", "position": 24 }
+              ],
+              "lyric": "E       G#m     A       B"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "E", "position": 0 },
+                { "chord": "G#m", "position": 15 }
+              ],
+              "lyric": "Sekian lama kita tak bersama"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_008",
+    "title": "Cinta Kau dan Dia",
+    "artist": "The Rock",
+    "originalKey": "Em",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": null,
+    "difficulty": "Medium",
+    "bpm": 78,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "Em", "position": 0 },
+                { "chord": "Bm", "position": 8 },
+                { "chord": "C", "position": 16 },
+                { "chord": "G", "position": 24 }
+              ],
+              "lyric": "Em      Bm      C       G"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "Em", "position": 0 },
+                { "chord": "Bm", "position": 16 }
+              ],
+              "lyric": "Hati ini takkan pernah mengerti"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_009",
+    "title": "Pupus",
+    "artist": "Dewa 19",
+    "originalKey": "G",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": null,
+    "difficulty": "Medium",
+    "bpm": 72,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "G", "position": 0 },
+                { "chord": "D/F#", "position": 8 },
+                { "chord": "Em", "position": 16 },
+                { "chord": "C", "position": 24 }
+              ],
+              "lyric": "G       D/F#    Em      C"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "G", "position": 0 },
+                { "chord": "D/F#", "position": 14 },
+                { "chord": "Em", "position": 26 }
+              ],
+              "lyric": "Aku di sini selalu mengingatmu"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_010",
+    "title": "Benci untuk Mencinta",
+    "artist": "Naif",
+    "originalKey": "C",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": null,
+    "difficulty": "Easy",
+    "bpm": 80,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "C", "position": 0 },
+                { "chord": "F", "position": 8 },
+                { "chord": "C", "position": 16 },
+                { "chord": "F", "position": 24 }
+              ],
+              "lyric": "C       F       C       F"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "C", "position": 0 },
+                { "chord": "F", "position": 14 }
+              ],
+              "lyric": "Betapa aku mencintaimu"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_011",
+    "title": "Lagu Cinta Melulu",
+    "artist": "Efek Rumah Kaca",
+    "originalKey": "A",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": null,
+    "difficulty": "Medium",
+    "bpm": 110,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "A", "position": 0 },
+                { "chord": "C#m", "position": 8 },
+                { "chord": "D", "position": 16 },
+                { "chord": "E", "position": 24 }
+              ],
+              "lyric": "A       C#m     D       E"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "A", "position": 0 },
+                { "chord": "C#m", "position": 18 }
+              ],
+              "lyric": "Kita mendamba lagu cinta melulu"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_012",
+    "title": "I'm Not Okay (I Promise)",
+    "artist": "My Chemical Romance",
+    "originalKey": "C#m",
+    "tuning": "Half-Step Down (Eb Ab Db Gb Bb Eb)",
+    "capoFret": null,
+    "difficulty": "Hard",
+    "bpm": 180,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "C#m", "position": 0 },
+                { "chord": "A", "position": 8 },
+                { "chord": "E", "position": 16 },
+                { "chord": "B", "position": 24 }
+              ],
+              "lyric": "C#m     A       E       B"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "C#m", "position": 0 },
+                { "chord": "A", "position": 16 }
+              ],
+              "lyric": "Well if you wanted honesty"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_013",
+    "title": "Last Night on Earth",
+    "artist": "Green Day",
+    "originalKey": "G",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": null,
+    "difficulty": "Medium",
+    "bpm": 68,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "G", "position": 0 },
+                { "chord": "B7", "position": 8 },
+                { "chord": "Em", "position": 16 },
+                { "chord": "C", "position": 24 }
+              ],
+              "lyric": "G       B7      Em      C"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "G", "position": 0 },
+                { "chord": "B7", "position": 14 }
+              ],
+              "lyric": "I text a postcard to you dear"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  },
+  {
+    "id": "song_014",
+    "title": "Angin Pujaan Hujan",
+    "artist": "Payung Teduh",
+    "originalKey": "G",
+    "tuning": "Standard (E A D G B E)",
+    "capoFret": 3,
+    "difficulty": "Medium",
+    "bpm": 96,
+    "chordSheet": {
+      "sections": [
+        {
+          "name": "Intro",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "G", "position": 0 },
+                { "chord": "Bm", "position": 8 },
+                { "chord": "C", "position": 16 },
+                { "chord": "D7", "position": 24 }
+              ],
+              "lyric": "G       Bm      C       D7"
+            }
+          ]
+        },
+        {
+          "name": "Verse",
+          "lines": [
+            {
+              "chords": [
+                { "chord": "G", "position": 0 },
+                { "chord": "Bm", "position": 16 }
+              ],
+              "lyric": "Datanglah angin pujaan malam"
+            }
+          ]
+        }
+      ]
+    },
+    "guitarTab": null
+  }
+]
