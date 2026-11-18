@@ -25,11 +25,13 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(true) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 28.dp),
         horizontalAlignment = Alignment.Start,
@@ -41,7 +43,7 @@ fun LoginScreen(
             modifier = Modifier
                 .size(58.dp)
                 .background(
-                    PrimaryRed,
+                    MaterialTheme.colorScheme.primary,
                     RoundedCornerShape(18.dp)
                 ),
             contentAlignment = Alignment.Center
@@ -49,7 +51,7 @@ fun LoginScreen(
             Icon(
                 imageVector = Icons.Default.MusicNote,
                 contentDescription = "Stringly Logo",
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(32.dp)
             )
         }
@@ -58,17 +60,16 @@ fun LoginScreen(
 
         Text(
             text = "Welcome Back!",
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF202020)
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = "Your music journey continues here.",
-            fontSize = 14.sp,
-            color = Color.Gray
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(36.dp))
@@ -84,12 +85,17 @@ fun LoginScreen(
 
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                emailError = null
+            },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Enter your email") },
             leadingIcon = {
                 Icon(Icons.Default.Email, contentDescription = null)
             },
+            isError = emailError != null,
+            supportingText = emailError?.let { msg -> { Text(msg) } },
             shape = RoundedCornerShape(14.dp),
             singleLine = true,
             keyboardOptions = KeyboardOptions(
@@ -97,20 +103,23 @@ fun LoginScreen(
             )
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Password
         Text(
             text = "Password",
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = {
+                password = it
+                passwordError = null
+            },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Enter your password") },
             leadingIcon = {
@@ -131,6 +140,8 @@ fun LoginScreen(
                     )
                 }
             },
+            isError = passwordError != null,
+            supportingText = passwordError?.let { msg -> { Text(msg) } },
             visualTransformation = if (passwordVisible)
                 VisualTransformation.None
             else
@@ -173,18 +184,26 @@ fun LoginScreen(
 
         // Login Button
         Button(
-            onClick = onLoginSuccess,
+            onClick = {
+                val validEmail = email.isNotBlank() && email.contains("@")
+                val validPassword = password.length >= 6
+                emailError = if (!validEmail) "Enter a valid email address." else null
+                passwordError = if (!validPassword) "Password must be at least 6 characters." else null
+                if (validEmail && validPassword) {
+                    onLoginSuccess()
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(54.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = PrimaryRed
+                containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
             Text(
                 "Login",
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
         }
