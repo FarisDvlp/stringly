@@ -20,6 +20,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,8 +36,11 @@ fun ProfileScreen(
     onNavigateTo: (String) -> Unit,
     onLogout: () -> Unit
 ) {
-    var displayName by remember { mutableStateOf("Leo") }
-    var handle by remember { mutableStateOf("@leo.strings") }
+    val auth = remember { FirebaseAuth.getInstance() }
+    val currentUser = auth.currentUser
+
+    var displayName by remember { mutableStateOf(currentUser?.displayName?.ifBlank { null } ?: "Musician") }
+    var handle by remember { mutableStateOf(currentUser?.email ?: "@stringly.user") }
     var skillLevel by remember { mutableStateOf("Intermediate") }
     var mainGuitar by remember { mutableStateOf("Fender Player Stratocaster") }
     var mainAmp by remember { mutableStateOf("Boss Katana 50") }
@@ -424,6 +429,11 @@ fun ProfileScreen(
                 mainGuitar = newGuitar
                 mainAmp = newAmp
                 showEditSheet = false
+                currentUser?.updateProfile(
+                    UserProfileChangeRequest.Builder()
+                        .setDisplayName(newName)
+                        .build()
+                )
                 statusBanner = "Profile updated."
             }
         )
@@ -432,9 +442,15 @@ fun ProfileScreen(
     if (showPasswordDialog) {
         ChangePasswordDialog(
             onDismiss = { showPasswordDialog = false },
-            onConfirm = {
+            onConfirm = { newPass ->
+                currentUser?.updatePassword(newPass)?.addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        statusBanner = "Password updated successfully."
+                    } else {
+                        statusBanner = task.exception?.localizedMessage ?: "Failed to update password."
+                    }
+                }
                 showPasswordDialog = false
-                statusBanner = "Password updated."
             }
         )
     }
@@ -448,6 +464,7 @@ fun ProfileScreen(
                 Button(
                     onClick = {
                         showLogoutDialog = false
+                        auth.signOut()
                         onLogout()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -597,7 +614,7 @@ private fun EditProfileBottomSheet(
 @Composable
 private fun ChangePasswordDialog(
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: (String) -> Unit
 ) {
     var current by remember { mutableStateOf("") }
     var next by remember { mutableStateOf("") }
@@ -645,7 +662,7 @@ private fun ChangePasswordDialog(
                     current.isBlank() -> error = "Enter your current password."
                     next.length < 6 -> error = "New password must be at least 6 characters."
                     confirm != next -> error = "New passwords do not match."
-                    else -> onConfirm()
+                    else -> onConfirm(next)
                 }
             }) {
                 Text("Update")

@@ -23,14 +23,32 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.FirebaseAuth
 import com.stringly.app.ui.components.GuitarFretboardDiagram
 import com.stringly.app.ui.theme.AmberGold
 import com.stringly.app.ui.theme.StageSuccess
+import java.util.Calendar
 
 @Composable
 fun HomeScreen(
     onNavigateTo: (String) -> Unit
 ) {
+    val currentUser = remember { FirebaseAuth.getInstance().currentUser }
+    val firstName = remember(currentUser) {
+        val name = currentUser?.displayName?.ifBlank { null }
+        name?.trim()?.split("\\s+".toRegex())?.firstOrNull() ?: "Musician"
+    }
+
+    val greeting = remember {
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        when (hour) {
+            in 5..11 -> "Good morning"
+            in 12..16 -> "Good afternoon"
+            in 17..21 -> "Good evening"
+            else -> "Good night"
+        }
+    }
+
     var bpm by remember { mutableIntStateOf(120) }
     var isMetronomePlaying by remember { mutableStateOf(false) }
     var currentBeat by remember { mutableIntStateOf(0) }
@@ -92,7 +110,7 @@ fun HomeScreen(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "Good evening, Leo",
+                    text = "$greeting, $firstName",
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -110,12 +128,21 @@ fun HomeScreen(
                     .clickable { onNavigateTo("profile") },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Open profile and settings",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
+                if (firstName.isNotBlank() && firstName != "Musician") {
+                    Text(
+                        text = firstName.first().uppercase(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Open profile and settings",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
 

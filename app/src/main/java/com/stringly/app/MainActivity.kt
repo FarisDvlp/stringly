@@ -11,11 +11,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.*
 import com.stringly.app.ui.screens.*
 import com.stringly.app.ui.theme.PrimaryRed
@@ -70,12 +68,16 @@ class MainActivity : ComponentActivity() {
                                     NavigationBarItem(
                                         selected = selected,
                                         onClick = {
-                                            navController.navigate(screen.route) {
-                                                popUpTo(navController.graph.startDestinationId) {
-                                                    saveState = true
+                                            if (currentRoute != screen.route) {
+                                                navController.navigate(screen.route) {
+                                                    popUpTo(Screen.Home.route) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    if (screen.route != Screen.Home.route) {
+                                                        restoreState = true
+                                                    }
                                                 }
-                                                launchSingleTop = true
-                                                restoreState = true
                                             }
                                         },
                                         icon = {
@@ -102,11 +104,19 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 ) { innerPadding ->
-                    NavHost(
-                        navController = navController,
-                        startDestination = Screen.Login.route,
-                        modifier = Modifier.padding(innerPadding)
-                    ) {
+                val initialRoute = remember {
+                    if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser != null) {
+                        Screen.Home.route
+                    } else {
+                        Screen.Login.route
+                    }
+                }
+
+                NavHost(
+                    navController = navController,
+                    startDestination = initialRoute,
+                    modifier = Modifier.padding(innerPadding)
+                ) {
                         composable(Screen.Login.route) {
                             LoginScreen(
                                 onLoginSuccess = {
@@ -175,12 +185,16 @@ class MainActivity : ComponentActivity() {
                                 onBack = { navController.popBackStack() },
                                 onNavigateTo = { route ->
                                     if (route in topLevelRoutes) {
-                                        navController.navigate(route) {
-                                            popUpTo(navController.graph.startDestinationId) {
-                                                saveState = true
+                                        if (currentRoute != route) {
+                                            navController.navigate(route) {
+                                                popUpTo(Screen.Home.route) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                if (route != Screen.Home.route) {
+                                                    restoreState = true
+                                                }
                                             }
-                                            launchSingleTop = true
-                                            restoreState = true
                                         }
                                     } else {
                                         navController.navigate(route)
