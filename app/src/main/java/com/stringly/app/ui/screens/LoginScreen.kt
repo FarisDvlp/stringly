@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
 import com.stringly.app.ui.theme.PrimaryRed
 
 @Composable
@@ -27,6 +28,11 @@ fun LoginScreen(
     var rememberMe by remember { mutableStateOf(true) }
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
+    var authError by remember { mutableStateOf<String?>(null) }
+    var infoMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    val auth = remember { FirebaseAuth.getInstance() }
 
     Column(
         modifier = Modifier
@@ -74,6 +80,40 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(36.dp))
 
+        if (authError != null) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                Text(
+                    text = authError!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
+
+        if (infoMessage != null) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                Text(
+                    text = infoMessage!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
+
         // Email
         Text(
             text = "Email Address",
@@ -88,6 +128,7 @@ fun LoginScreen(
             onValueChange = {
                 email = it
                 emailError = null
+                authError = null
             },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Enter your email") },
@@ -98,6 +139,7 @@ fun LoginScreen(
             supportingText = emailError?.let { msg -> { Text(msg) } },
             shape = RoundedCornerShape(14.dp),
             singleLine = true,
+            enabled = !isLoading,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email
             )
@@ -119,6 +161,7 @@ fun LoginScreen(
             onValueChange = {
                 password = it
                 passwordError = null
+                authError = null
             },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Enter your password") },
@@ -147,7 +190,8 @@ fun LoginScreen(
             else
                 PasswordVisualTransformation(),
             shape = RoundedCornerShape(14.dp),
-            singleLine = true
+            singleLine = true,
+            enabled = !isLoading
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -162,6 +206,7 @@ fun LoginScreen(
                 Checkbox(
                     checked = rememberMe,
                     onCheckedChange = { rememberMe = it },
+                    enabled = !isLoading,
                     colors = CheckboxDefaults.colors(
                         checkedColor = PrimaryRed
                     )
@@ -174,8 +219,22 @@ fun LoginScreen(
                 color = PrimaryRed,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable {
-                    // TODO: Forgot password
+                modifier = Modifier.clickable(enabled = !isLoading) {
+                    if (email.isBlank() || !email.contains("@")) {
+                        emailError = "Enter your email address first to reset password."
+                    } else {
+                        isLoading = true
+                        authError = null
+                        auth.sendPasswordResetEmail(email.trim())
+                            .addOnCompleteListener { task ->
+                                isLoading = false
+                                if (task.isSuccessful) {
+                                    infoMessage = "Password reset email sent to $email"
+                                } else {
+                                    authError = task.exception?.localizedMessage ?: "Failed to send reset email."
+                                }
+                            }
+                    }
                 }
             )
         }
@@ -190,9 +249,21 @@ fun LoginScreen(
                 emailError = if (!validEmail) "Enter a valid email address." else null
                 passwordError = if (!validPassword) "Password must be at least 6 characters." else null
                 if (validEmail && validPassword) {
-                    onLoginSuccess()
+                    isLoading = true
+                    authError = null
+                    infoMessage = null
+                    auth.signInWithEmailAndPassword(email.trim(), password)
+                        .addOnCompleteListener { task ->
+                            isLoading = false
+                            if (task.isSuccessful) {
+                                onLoginSuccess()
+                            } else {
+                                authError = task.exception?.localizedMessage ?: "Login failed. Please check your credentials."
+                            }
+                        }
                 }
             },
+            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(54.dp),
@@ -201,11 +272,19 @@ fun LoginScreen(
                 containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
-            Text(
-                "Login",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.5.dp
+                )
+            } else {
+                Text(
+                    "Login",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(28.dp))
@@ -226,9 +305,23 @@ fun LoginScreen(
                 color = PrimaryRed,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(enabled = !isLoading) {
                     onNavigateToSignUp()
                 }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        TextButton(
+            onClick = { onLoginSuccess() },
+            enabled = !isLoading,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text(
+                "Skip for now (Continue as Guest)",
+                color = Color.Gray,
+                fontSize = 13.sp
             )
         }
     }

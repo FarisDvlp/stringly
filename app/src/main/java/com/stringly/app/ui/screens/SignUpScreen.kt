@@ -12,6 +12,8 @@ import androidx.compose.ui.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
 
 @Composable
 fun SignUpScreen(
@@ -26,6 +28,10 @@ fun SignUpScreen(
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
     var confirmError by remember { mutableStateOf<String?>(null) }
+    var authError by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    val auth = remember { FirebaseAuth.getInstance() }
 
     Column(
         modifier = Modifier
@@ -53,6 +59,23 @@ fun SignUpScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
+        if (authError != null) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            ) {
+                Text(
+                    text = authError!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
+
         Text(
             text = "Full Name",
             style = MaterialTheme.typography.titleMedium,
@@ -61,14 +84,15 @@ fun SignUpScreen(
         Spacer(modifier = Modifier.height(6.dp))
         OutlinedTextField(
             value = name,
-            onValueChange = { name = it; nameError = null },
+            onValueChange = { name = it; nameError = null; authError = null },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Enter your name") },
             leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
             isError = nameError != null,
             supportingText = nameError?.let { msg -> { Text(msg) } },
             shape = RoundedCornerShape(12.dp),
-            singleLine = true
+            singleLine = true,
+            enabled = !isLoading
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -81,7 +105,7 @@ fun SignUpScreen(
         Spacer(modifier = Modifier.height(6.dp))
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it; emailError = null },
+            onValueChange = { email = it; emailError = null; authError = null },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Enter your email") },
             leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
@@ -89,6 +113,7 @@ fun SignUpScreen(
             supportingText = emailError?.let { msg -> { Text(msg) } },
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
+            enabled = !isLoading,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
 
@@ -102,7 +127,7 @@ fun SignUpScreen(
         Spacer(modifier = Modifier.height(6.dp))
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it; passwordError = null },
+            onValueChange = { password = it; passwordError = null; authError = null },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Create a password (min 6 chars)") },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
@@ -110,7 +135,8 @@ fun SignUpScreen(
             supportingText = passwordError?.let { msg -> { Text(msg) } },
             visualTransformation = PasswordVisualTransformation(),
             shape = RoundedCornerShape(12.dp),
-            singleLine = true
+            singleLine = true,
+            enabled = !isLoading
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -123,7 +149,7 @@ fun SignUpScreen(
         Spacer(modifier = Modifier.height(6.dp))
         OutlinedTextField(
             value = confirmPassword,
-            onValueChange = { confirmPassword = it; confirmError = null },
+            onValueChange = { confirmPassword = it; confirmError = null; authError = null },
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Confirm your password") },
             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
@@ -131,7 +157,8 @@ fun SignUpScreen(
             supportingText = confirmError?.let { msg -> { Text(msg) } },
             visualTransformation = PasswordVisualTransformation(),
             shape = RoundedCornerShape(12.dp),
-            singleLine = true
+            singleLine = true,
+            enabled = !isLoading
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -147,19 +174,48 @@ fun SignUpScreen(
                 passwordError = if (!okPass) "Password must be at least 6 characters." else null
                 confirmError = if (!okConfirm) "Passwords do not match." else null
                 if (okName && okEmail && okPass && okConfirm) {
-                    onSignUpSuccess()
+                    isLoading = true
+                    authError = null
+                    auth.createUserWithEmailAndPassword(email.trim(), password)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                val user = auth.currentUser
+                                val profileUpdates = UserProfileChangeRequest.Builder()
+                                    .setDisplayName(name.trim())
+                                    .build()
+                                user?.updateProfile(profileUpdates)?.addOnCompleteListener {
+                                    isLoading = false
+                                    onSignUpSuccess()
+                                } ?: run {
+                                    isLoading = false
+                                    onSignUpSuccess()
+                                }
+                            } else {
+                                isLoading = false
+                                authError = task.exception?.localizedMessage ?: "Sign up failed."
+                            }
+                        }
                 }
             },
+            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(54.dp),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(
-                "Create Account",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.5.dp
+                )
+            } else {
+                Text(
+                    "Create Account",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -179,7 +235,7 @@ fun SignUpScreen(
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.clickable {
+                modifier = Modifier.clickable(enabled = !isLoading) {
                     onNavigateToLogin()
                 }
             )

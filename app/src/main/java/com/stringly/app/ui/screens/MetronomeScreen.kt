@@ -20,47 +20,31 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stringly.app.metronome.controller.MetronomeController
+import com.stringly.app.metronome.model.MetronomeStatus
 import com.stringly.app.ui.theme.*
 
 @Composable
 fun MetronomeScreen(
     onBack: () -> Unit = {}
 ) {
-    var bpm by remember { mutableIntStateOf(120) }
-    var isPlaying by remember { mutableStateOf(false) }
-    var currentBeat by remember { mutableIntStateOf(0) }
-    var timeSignature by remember { mutableIntStateOf(4) }
-    var tempoName by remember { mutableStateOf("Moderato") }
-
-    LaunchedEffect(bpm) {
-        tempoName = when {
-            bpm < 60 -> "Largo"
-            bpm < 76 -> "Adagio"
-            bpm < 108 -> "Andante"
-            bpm < 120 -> "Moderato"
-            bpm < 168 -> "Allegro"
-            bpm < 200 -> "Presto"
-            else -> "Prestissimo"
-        }
+    val scope = rememberCoroutineScope()
+    val controller = remember { MetronomeController(scope) }
+    DisposableEffect(controller) {
+        onDispose { controller.release() }
     }
 
-    LaunchedEffect(isPlaying, bpm, timeSignature) {
-        if (isPlaying) {
-            val interval = (60_000L / bpm)
-            while (true) {
-                kotlinx.coroutines.delay(interval)
-                currentBeat = (currentBeat + 1) % timeSignature
-            }
-        } else {
-            currentBeat = 0
-        }
-    }
+    val state by controller.state.collectAsState()
+    val isPlaying = state.status == MetronomeStatus.RUNNING
+    val bpm = state.bpm
+    val timeSignature = state.timeSignature.numerator
+    val tempoName = state.tempoMarking
 
     // Pendulum visual rotation
     val pendulumRotation = remember { Animatable(0f) }
     LaunchedEffect(isPlaying, bpm) {
         if (isPlaying) {
-            val halfBeatMs = (30_000 / bpm).toInt()
+            val halfBeatMs = (30_000 / bpm.coerceAtLeast(1)).coerceAtLeast(50)
             while (true) {
                 pendulumRotation.animateTo(24f, animationSpec = tween(halfBeatMs, easing = FastOutSlowInEasing))
                 pendulumRotation.animateTo(-24f, animationSpec = tween(halfBeatMs, easing = FastOutSlowInEasing))
@@ -103,11 +87,19 @@ fun MetronomeScreen(
             }
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.clickable {
+                    when (state.timeSignature.numerator to state.timeSignature.denominator) {
+                        4 to 4 -> controller.setTimeSignature(3, 4)
+                        3 to 4 -> controller.setTimeSignature(6, 8)
+                        6 to 8 -> controller.setTimeSignature(2, 4)
+                        else -> controller.setTimeSignature(4, 4)
+                    }
+                }
             ) {
                 Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
                     Text(
-                        text = "$timeSignature/4",
+                        text = state.timeSignature.label,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyMedium
@@ -146,12 +138,13 @@ fun MetronomeScreen(
                     )
             )
 
-            // Center Knob Readout
+            // Center Knob Readout (tap for Tap Tempo)
             Box(
                 modifier = Modifier
                     .size(110.dp)
                     .clip(CircleShape)
                     .background(Color.White)
+                    .clickable { controller.tapTempo() }
                     .padding(8.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -178,7 +171,7 @@ fun MetronomeScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             repeat(timeSignature) { idx ->
-                val isActive = currentBeat == idx && isPlaying
+                val isActive = (state.currentBeat - 1) == idx && isPlaying
                 val isAccent = idx == 0
                 Box(
                     modifier = Modifier
@@ -202,7 +195,7 @@ fun MetronomeScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = { if (bpm > 30) bpm -= 5 },
+                onClick = { controller.decreaseBpm(5) },
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
@@ -211,7 +204,7 @@ fun MetronomeScreen(
                 Text(text = "−5", fontWeight = FontWeight.Bold, color = OnSurfaceLight)
             }
             IconButton(
-                onClick = { if (bpm > 30) bpm -= 1 },
+                onClick = { controller.decreaseBpm(1) },
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
@@ -220,7 +213,7 @@ fun MetronomeScreen(
                 Text(text = "−1", fontWeight = FontWeight.Bold, color = OnSurfaceLight)
             }
             IconButton(
-                onClick = { if (bpm < 280) bpm += 1 },
+                onClick = { controller.increaseBpm(1) },
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
@@ -229,7 +222,7 @@ fun MetronomeScreen(
                 Text(text = "+1", fontWeight = FontWeight.Bold, color = OnSurfaceLight)
             }
             IconButton(
-                onClick = { if (bpm < 280) bpm += 5 },
+                onClick = { controller.increaseBpm(5) },
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
@@ -241,7 +234,7 @@ fun MetronomeScreen(
 
         // Large Play / Stop CTA Button
         Button(
-            onClick = { isPlaying = !isPlaying },
+            onClick = { if (isPlaying) controller.stop() else controller.start() },
             shape = RoundedCornerShape(28.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (isPlaying) CharcoalHardware else PrimaryRed
