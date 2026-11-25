@@ -310,5 +310,19 @@ fun LoginScreen(
                 }
             )
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        TextButton(
+            onClick = { onLoginSuccess() },
+            enabled = !isLoading,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text(
+                "Skip for now (Continue as Guest)",
+                color = Color.Gray,
+                fontSize = 13.sp
+            )
+        }
     }
 }
